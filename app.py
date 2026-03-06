@@ -90,28 +90,34 @@ if user_input:
         st.markdown(user_input)
 
     with st.chat_message("assistant"):
-        with st.spinner("Thinking..."):
-            stream = chatbot.stream(
-                {"messages": [HumanMessage(content=user_input)]},
-                config=CONFIG,
-                stream_mode="messages",
-            )
-            
-            first = next(
-                (chunk for chunk, metadata in stream if hasattr(chunk, "content") and chunk.content),
-                None,
-            )
+        try:
+            with st.spinner("Thinking..."):
+                stream = chatbot.stream(
+                    {"messages": [HumanMessage(content=user_input)]},
+                    config=CONFIG,
+                    stream_mode="messages",
+                )
 
-        def response_generator():
-            if first is not None:
-                yield first.content
-            for chunk, metadata in stream:
-                if hasattr(chunk, "content") and chunk.content:
-                    yield chunk.content
+                first = next(
+                    (chunk for chunk, metadata in stream if hasattr(chunk, "content") and chunk.content),
+                    None,
+                )
 
-        ai_response = st.write_stream(response_generator())
+            def response_generator():
+                if first is not None:
+                    yield first.content
+                for chunk, metadata in stream:
+                    if hasattr(chunk, "content") and chunk.content:
+                        yield chunk.content
 
-    if is_first_message:
+            ai_response = st.write_stream(response_generator())
+
+        except Exception:
+            error_msg = "Something went wrong. Please contact the developer."
+            st.error(error_msg)
+            ai_response = error_msg
+
+    if is_first_message and ai_response != "Something went wrong. Please contact the developer.":
         st.session_state['chat_titles'][current_thread] = generate_chat_title(user_input, ai_response)
 
     st.session_state['message_history'].append({
